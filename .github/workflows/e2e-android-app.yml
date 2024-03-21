@@ -10,23 +10,13 @@ on:
 
 jobs:
   android-app:
-    runs-on: ubuntu-latest
-    # Src: https://hugo.alliau.me/posts/2021-05-04-migration-to-github-native-dependabot-solutions-for-auto-merge-and-action-secrets.html#share-your-secrets-with-dependabot
-    # If the PR is coming from a fork (pull_request_target), ensure it's opened by "dependabot[bot]".
-    # Otherwise, clone it normally.
-    if: |
-        (github.event_name == 'pull_request_target' && github.actor == 'dependabot[bot]') ||
-        (github.event_name != 'pull_request_target' && github.actor != 'dependabot[bot]')
+    runs-on: self-hosted
     steps:
       - name: ⬇️ Checkout Repository
-        if: ${{ github.event_name != 'pull_request_target' }}
         uses: actions/checkout@v3
 
       - name: ⬇️ Checkout PR Repository
-        if: ${{ github.event_name == 'pull_request_target' }}
         uses: actions/checkout@v3
-        with:
-            ref: ${{ github.event.pull_request.head.sha }}
 
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@v3
@@ -42,25 +32,6 @@ jobs:
             mkdir -p apps
             wget https://github.com/webdriverio/native-demo-app/releases/download/v1.0.8/android.wdio.native.app.v1.0.8.apk -P apps
 
-      - name: 📬 Upload App to Sauce Labs
-        run: |
-            curl -v \
-                -F "payload=@./apps/android.wdio.native.app.v1.0.8.apk" \
-                -F name=wdio-demo-app-android.apk \
-                -u "${{ secrets.SAUCE_USERNAME }}:${{ secrets.SAUCE_ACCESS_KEY }}" \
-                'https://api.eu-central-1.saucelabs.com/v1/storage/upload'
+      - name: 📲 Run Tests on an Android
+        run: npm run android.app
 
-      - name: 📲 Run Tests on an Android Emulator
-        env:
-            SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-            SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
-        run: npm run android.sauce.emulators.app.eu
-
-    # Not needed now we are running on Sauce Labs
-    #   - name: 💾 Save server output
-    #     if: failure()
-    #     uses: actions/upload-artifact@v4
-    #     with:
-    #         name: android-runner-output
-    #         path: |
-    #             logs/
